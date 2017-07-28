@@ -1,0 +1,47 @@
+Parameters of language model:
+Toolkit version: V1.0.
+Training files: ./input/train/.
+Validation files: ./input/valid/.
+Test files: ./input/test/.
+Mark for start of sentence: <s>.
+Mark for end of sentence: </s>.
+Mark for wprds out of vocabulary: OOV.
+Dimension of feature vector: 30.
+Grammer order: 5.
+Size of input layer: 120.
+Number of word class: 100.
+Code for word class assignment: 2.
+Number of hierarchical class layer: 1.
+Size of vocabulary: 3723.
+Total words in training data: 91349.
+Size of last hidden layer: 30.
+Number of hidden layers: 1.
+	1th hidden layer, name: 0, size: 30.
+Code for first hidden layer: 0.
+Code for activation function: 0.
+Input level of sequences: 0.
+Maximum of iteraton: 20.
+Random seed: 1.
+Enable bias terms: 0.
+Enable direct connections: 0.
+Enable caching: 0.
+Enable dynamic model: 0.
+Reverse word order: 0.
+Learning rate: 0.01000000.
+Regularization parameters: 0.00100000.
+Maximum of input sequnece's length: 100.
+2017-07-28 14:03:36: training starts!
+2017-07-28 14:03:52: 1th interation, training entropy is 7.16, alpha is 0.01000, 5097.93 words/s, validation entropy is 6.82.
+2017-07-28 14:04:09: 2th interation, training entropy is 6.60, alpha is 0.01000, 5096.14 words/s, validation entropy is 6.62.
+2017-07-28 14:04:26: 3th interation, training entropy is 6.40, alpha is 0.01000, 5095.65 words/s, validation entropy is 6.52.
+2017-07-28 14:04:43: 4th interation, training entropy is 6.27, alpha is 0.01000, 5093.43 words/s, validation entropy is 6.47.
+2017-07-28 14:04:59: 5th interation, training entropy is 6.17, alpha is 0.01000, 5091.66 words/s, validation entropy is 6.43.
+2017-07-28 14:05:16: 6th interation, training entropy is 6.08, alpha is 0.01000, 5092.61 words/s, validation entropy is 6.41.
+2017-07-28 14:05:33: 7th interation, training entropy is 6.01, alpha is 0.01000, 5093.12 words/s, validation entropy is 6.40.
+2017-07-28 14:05:50: 8th interation, training entropy is 5.91, alpha is 0.00500, 5093.33 words/s, validation entropy is 6.33.
+2017-07-28 14:06:07: 9th interation, training entropy is 5.85, alpha is 0.00250, 5093.04 words/s, validation entropy is 6.29.
+2017-07-28 14:06:24: 10th interation, training entropy is 5.82, alpha is 0.00125, 5093.43 words/s, validation entropy is 6.27.
+2017-07-28 14:06:41: 11th interation, training entropy is 5.80, alpha is 0.00063, 5093.50 words/s, validation entropy is 6.26.
+2017-07-28 14:06:41: model is saved sucessfully!
+2017-07-28 14:06:41: test starts!
+2017-07-28 14:06:42: PPL of test data set 75.30, 21937.03 words/s.
