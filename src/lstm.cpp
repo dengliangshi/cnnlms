@@ -10,7 +10,13 @@
 
 
 // --------------------------------------------------------Global Strings----------------------------------------------------
-
+// i(t) = G(Ui*x(t) + Wi*s(t-1) + Vi*c(t-1) + bi)
+// f(t) = G(Uf*x(t) + Wf*s(t-1) + Vf*c(t-1) + bf)
+// g(t) = F(U*x(t) + W*s(t-1) + b)
+// c(t) = f(t)*c(t-1) + i(t)*g(t)
+// o(t) = G(Uo*x(t) + Wo*s(t-1) + Vo*c(t) + bo)
+// h(t) = F(c(t))
+// s(t) = o(t)*h(t)
 
 // ------------------------------------------------------------Main----------------------------------------------------------
 void LSTMNN::InitModel(int inputSize, int hiddenSize)
@@ -81,10 +87,9 @@ weight* LSTMNN::Run(weight *input, int length)
             intNext = intHiddenSize*(t+1) + i;
             ig[intIndex] = 0;
             fg[intIndex] = 0;
-            og[intIndex] = 0;
             g[intIndex] = 0;
             c[intNext].er = 0;
-            s[intNext].er = 0;
+            
             for(int j=0; j<intInputSize; j++)
             {
                 ig[intIndex] += iGate.U[intInputSize*i+j].re * x[intInputSize*(t+1)+j].re;
@@ -98,8 +103,6 @@ weight* LSTMNN::Run(weight *input, int length)
                     + iGate.V[intHiddenSize*i+j].re * c[intHiddenSize*t+j].re);
                 fg[intIndex] += (fGate.W[intHiddenSize*i+j].re * s[intHiddenSize*t+j].re
                     + fGate.V[intHiddenSize*i+j].re * c[intHiddenSize*t+j].re);
-                og[intIndex] += (oGate.W[intHiddenSize*i+j].re * s[intHiddenSize*t+j].re
-                    + oGate.V[intHiddenSize*i+j].re * c[intHiddenSize*t+j].re);
                 g[intIndex] += objNodes.W[intHiddenSize*i+j].re * s[intHiddenSize*t+j].re;
             }
             if(bEnBias)
@@ -117,10 +120,6 @@ weight* LSTMNN::Run(weight *input, int length)
             if(fg[intIndex] < -50) { fg[intIndex] = -50; }
             fg[intIndex] = AcFun(fg[intIndex], intGateFun);
 
-            if(og[intIndex] > 50) { og[intIndex] = 50; }
-            if(og[intIndex] < -50) { og[intIndex] = -50; }
-            og[intIndex] = AcFun(og[intIndex], intGateFun);
-
             if(g[intIndex] > 50) { g[intIndex] = 50; }
             if(g[intIndex] < -50) { g[intIndex] = -50; }
             g[intIndex] = AcFun(g[intIndex], intAcFun);
@@ -129,6 +128,22 @@ weight* LSTMNN::Run(weight *input, int length)
             if(c[intNext].re > 50) { c[intNext].re = 50; }
             if(c[intNext].re < -50) { c[intNext].re = -50; }
             h[intIndex] = AcFun(c[intNext].re, intAcFun);
+        }
+
+        for(int i=0; i<intHiddenSize; i++)
+        {
+            intIndex = intHiddenSize*t + i;
+            intNext = intHiddenSize*(t+1) + i;
+            s[intNext].er = 0;
+            for(int j=0; j<intHiddenSize; j++)
+            {
+                og[intIndex] += (oGate.W[intHiddenSize*i+j].re * s[intHiddenSize*t+j].re
+                    + oGate.V[intHiddenSize*i+j].re * c[intHiddenSize*(t+1)+j].re);
+            }
+            if(og[intIndex] > 50) { og[intIndex] = 50; }
+            if(og[intIndex] < -50) { og[intIndex] = -50; }
+            og[intIndex] = AcFun(og[intIndex], intGateFun);
+            
             s[intNext].re = og[intIndex]*h[intIndex];
         }
     }
@@ -151,6 +166,20 @@ void LSTMNN::Update(double dAlpha, double dBeta)
             intIndex = intHiddenSize*t+i;
             intNext = intHiddenSize*(t+1)+i;
 
+            dLdo = s[intNext].er * h[intIndex] * dAcFun(og[intIndex], intGateFun);
+            for(int j=0; j<intHiddenSize; j++)
+            {
+                oGate.W[intHiddenSize*i+j].er += dLdo * s[intHiddenSize*t+j].re;
+                s[intHiddenSize*t+j].er += dLdo * oGate.W[intHiddenSize*i+j].re;
+                oGate.V[intHiddenSize*i+j].er += dLdo * c[intHiddenSize*(t+1)+j].re;
+                c[intHiddenSize*(t+1)+j].er += dLdo * oGate.V[intHiddenSize*i+j].re;
+            }
+        }
+        for(int i=0; i<intHiddenSize; i++)
+        {
+            intIndex = intHiddenSize*t+i;
+            intNext = intHiddenSize*(t+1)+i;
+            
             dLdo = s[intNext].er * h[intIndex] * dAcFun(og[intIndex], intGateFun);
             c[intNext].er += s[intNext].er * og[intIndex] * dAcFun(h[intIndex], intAcFun);
             dLdi = c[intNext].er * g[intIndex] * dAcFun(ig[intIndex], intGateFun);
@@ -179,11 +208,6 @@ void LSTMNN::Update(double dAlpha, double dBeta)
                 s[intHiddenSize*t+j].er += dLdf * fGate.W[intHiddenSize*i+j].re;
                 fGate.V[intHiddenSize*i+j].er += dLdf * c[intHiddenSize*t+j].re;
                 c[intHiddenSize*t+j].er += dLdf * fGate.V[intHiddenSize*i+j].re;
-
-                oGate.W[intHiddenSize*i+j].er += dLdo * s[intHiddenSize*t+j].re;
-                s[intHiddenSize*t+j].er += dLdo * oGate.W[intHiddenSize*i+j].re;
-                oGate.V[intHiddenSize*i+j].er += dLdo * c[intHiddenSize*t+j].re;
-                c[intHiddenSize*t+j].er += dLdo * oGate.V[intHiddenSize*i+j].re;
 
                 objNodes.W[intHiddenSize*i+j].er += dLdg * s[intHiddenSize*t+j].re;
                 s[intHiddenSize*t+j].er += dLdg * objNodes.W[intHiddenSize*i+j].re;

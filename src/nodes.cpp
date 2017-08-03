@@ -64,6 +64,14 @@ void Nodes::InitModel(int inputSize, int hiddenSize, bool enBias)
             b[i].er = 0;
         }
     }
+    else
+    {
+        for(int i=0; i<intHiddenSize; i++)
+        {
+            b[i].re = 0;
+            b[i].er = 0;
+        }
+    }
 }
 
 void Nodes::Update(double dAlpha, double dBeta)

@@ -139,10 +139,10 @@ Dimension of feature vectors for words, like `-vector-dim 100`, and default is 1
 
 >-vocab-size
 
-Specify the maximum number of words in vocabuary, like '-vocab-size 100000', and default is 1000,000. If the number words from training data exceeds given maximum, the words with low frequecy will be excluded from vocabulary. Otherwise, all words will be added into vacabulary, and the size of vocabulary will be reset as the number of words.
+Specify the maximum number of words in vocabuary, like `-vocab-size 100000`, and default is 1000,000. If the number words from training data exceeds given maximum, the words with low frequecy will be excluded from vocabulary. Otherwise, all words will be added into vacabulary, and the size of vocabulary will be reset as the number of words.
 
 ## Usage
-The examples are given in this toolkit. More details about the languagel models built in this toolkit, please refer to [my posts](https://dengliangshi.github.io/).
+The examples are given with this toolkit, please refer to the file `example.sh`. More details about the languagel models built in this toolkit, please refer to [my posts](https://dengliangshi.github.io/).
 
 ## License
 The module is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
