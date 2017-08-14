@@ -26,7 +26,7 @@ private:
     int intClassSize;             // the size of word class
     int intClassAssign;           // word class assignment algorithm
     int intClassLayer;            // number of hierarchical word class layer
-    int intBottomSize;            // size of bottom layer in hierarchical architecture
+    int intTotalSize;             // total number of word classes
     int intInputUnit;             // the input level, 0 for word and 1 for character
     int intFileType;              // the format of training files, 0 for text and 1 for binary
     int *intSubClassSize;         // the number of words in each class

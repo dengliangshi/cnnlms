@@ -38,15 +38,15 @@ void Vocab::InitModel(string trainFiles, int fileType)
     intFileType = fileType;
     if(intClassAssign==0 && intClassLayer > 1)
     {
-        intBottomSize = pow(intClassSize, intClassLayer);
+        intTotalSize = pow(intClassSize, intClassLayer);
         bEnHierarchies = 1;
     }
     else
     {
-        intBottomSize = intClassSize;
+        intTotalSize = intClassSize;
         bEnHierarchies = 0;
     }
-    intSubClassSize = new int [intBottomSize];
+    intSubClassSize = new int [intTotalSize];
 }
 
 int Vocab::Generate()
@@ -202,23 +202,42 @@ void Vocab::SortVocab()
         wordList[intVocabSize-1].strName = strUnknown;
         wordList[intVocabSize-1].intFreq = intSumFreq;
     }
-    // sort words in descent order according to their frequency
-    for(int i = 0; i < intVocabSize; i++)
+    if(intClassAssign > 0)
     {
-        intMaxIndex = i;
-        for(int j = i + 1; j < intVocabSize; j++)
+        // sort words in descent order according to their frequency
+        for(int i = 0; i < intVocabSize; i++)
         {
-            if(wordList[j].intFreq > wordList[intMaxIndex].intFreq)
+            intMaxIndex = i;
+            for(int j = i + 1; j < intVocabSize; j++)
             {
-                intMaxIndex = j;
+                if(wordList[j].intFreq > wordList[intMaxIndex].intFreq)
+                {
+                    intMaxIndex = j;
+                }
             }
+            wordTemp = wordList[i];
+            wordList[i] = wordList[intMaxIndex];
+            wordList[intMaxIndex] = wordTemp;
         }
-        wordTemp = wordList[i];
-        wordList[i] = wordList[intMaxIndex];
-        wordList[intMaxIndex] = wordTemp;
     }
     // assign each word in vocabulary with a class
     AssignIndex(wordList);
+    /*FILE *fin;
+    fin = fopen("test.txt", "wb");
+    for(int i = 0; i < intVocabSize; i++)
+    {
+        fprintf(fin, "%d,\t", wordList[i].intClass);
+        if(bEnHierarchies)
+        {
+            for(int j=0; j<intClassLayer; j++)
+            {
+                fprintf(fin, "%d,\t", wordList[i].intVector[j]);
+            }
+        }
+        fprintf(fin, "\n");
+    }
+    fclose(fin);
+    exit(0);*/
     // add words into vocabulary and assign each word with index
     dictVocab.clear();
     for(int i = 0; i < intVocabSize; i++)
@@ -242,7 +261,6 @@ void Vocab::AssignIndex(word *wordList)
         {
             if(intClassLayer > 1)
             {
-                int intWordNum; 
                 int *intClassVector;
 
                 intClassVector = new int [intClassLayer];
@@ -250,7 +268,7 @@ void Vocab::AssignIndex(word *wordList)
                 {
                     intClassVector[i] = 0;
                 }
-                subClassSize = floor(intVocabSize/(pow(intClassSize, intClassLayer)));
+                subClassSize = ceil(intVocabSize/(pow(intClassSize, intClassLayer)));
                 if(subClassSize == 0)
                 {
                     printf("The size or layer number of word class is too large!\n");
@@ -260,31 +278,35 @@ void Vocab::AssignIndex(word *wordList)
                 {
                     wordList[i].intIndex = i;
                     wordList[i].intVector = new int [intClassLayer];
+                    
                     if(i % subClassSize == 0 && i>0)
                     {
-                        intClassIndex = intClassVector[intClassLayer-1];
-                        intSubClassSize[intClassIndex] = i - 1;
+                        if(intClassIndex < intTotalSize-1)
+                        {
+                            intSubClassSize[intClassIndex] = i - 1;
+                            intClassIndex ++;
+                            intClassVector[0] ++;
+                        }
                     }
                     for(int j=0; j<intClassLayer; j++)
                     {
-                        intWordNum = subClassSize * pow(intClassSize, intClassLayer-j-1);
-                        if(i % intWordNum == 0 && i>0)
+                        if(intClassVector[j]>intClassSize-1)
                         {
-                            if(intClassVector[j] < pow(intClassSize, j+1)-1)
+                            intClassVector[j] = 0;
+                            if((j+1)<intClassLayer)
                             {
-                                intClassVector[j] ++;
+                                 intClassVector[j+1]++;
                             }
                         }
                         wordList[i].intVector[j] = intClassVector[j];
                     }
-                    wordList[i].intClass = intClassVector[intClassLayer-1];
+                    wordList[i].intClass = intClassIndex;
                 }
-                intClassIndex = intClassVector[intClassLayer-1];
                 intSubClassSize[intClassIndex] = intVocabSize - 1;
             }
             else
             {
-                subClassSize = floor(intVocabSize/intClassSize);
+                subClassSize = ceil(intVocabSize/intClassSize);
                 for(int i=0; i<intVocabSize; i++)
                 {
                     wordList[i].intIndex = i;
@@ -430,7 +452,7 @@ void Vocab::SaveModel(FILE *fout)
         }
     }
     fprintf(fout, "Sub-class size:\n");
-    for(int i=0; i<intBottomSize; i++)
+    for(int i=0; i<intTotalSize; i++)
     {
         fprintf(fout, "%d\n", intSubClassSize[i]);
     }
@@ -487,7 +509,7 @@ void Vocab::LoadModel(FILE *fin)
         dictVocab[strVar] = wWord;
     }
     GotoDelimiter(':', fin);
-    for(int i=0; i<intBottomSize; i++)
+    for(int i=0; i<intTotalSize; i++)
     {
         fscanf(fin, "%d", &intVar);
         intSubClassSize[i] = intVar;

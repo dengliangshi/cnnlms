@@ -121,10 +121,7 @@ void NNLM::InitModel()
     // hierarchical word class
     if(intClassAssign==0 && intClassLayer>1)
     {
-        for(int i=0; i<intClassLayer; i++)
-        {
-            intClassOutput = (intClassOutput + 1) * intClassSize;
-        }
+        intClassOutput = intClassLayer * intClassSize;
         bEnHierarchies = 1;
     }
     else
@@ -323,60 +320,39 @@ void NNLM::Run()
             if(bEnBias) {y[intVocabSize*t+i].re += d[i];}
         }
         Softmax(y, intVocabSize*t+intLowerIndex, intVocabSize*t+intUpperIndex);
-        // probability distribution for word classes
+        // probability distribution for word classes      
+        for(int i=0; i<intClassOutput; i++)
+        {
+            c[intClassOutput*t+i].re = 0;
+            for(int j=0; j<intHiddenSize; j++)
+            {
+                c[intClassOutput*t+i].re += Vc[intHiddenSize*i+j] * s[intHiddenSize*(t+1)+j].re;
+            }
+            if(bEnDirect)
+            {
+                for(int j=0; j<intInputSize; j++)
+                {
+                    c[intClassOutput*t+i].re += Mc[intInputSize*i+j] * x[intInputSize*(t+1)+j].re;
+                }
+            }
+            if(bEnBias) {c[intClassOutput*t+i].re += dc[i];}
+        }
         if(bEnHierarchies)
         {
-            int intSumSize = 0;
-            intOffset = 0;
-            int classIndex;
+            int intClassIndex;
             dClassProb = 1;
-
-            for(int l=0; l<intClassLayer; l++)
+            
+            for(int i=0; i<intClassLayer; i++)
             {
-                for(int i=0; i<intClassSize; i++)
-                {
-                    classIndex = intOffset + intSumSize + i;
-                    c[intClassOutput*t+classIndex].re = 0;
-                    for(int j=0; j<intHiddenSize; j++)
-                    {
-                        c[intClassOutput*t+classIndex].re += Vc[intHiddenSize*classIndex+j] * s[intHiddenSize*(t+1)+j].re;
-                    }
-                    if(bEnDirect)
-                    {
-                        for(int j=0; j<intInputSize; j++)
-                        {
-                            c[intClassOutput*t+classIndex].re += Mc[intInputSize*classIndex+j] * x[intInputSize*(t+1)+j].re;
-                        }
-                    }
-                    if(bEnBias) {c[intClassOutput*t+classIndex].re += dc[classIndex];}
-                }
-                intClass = wIndexs[t+1].intVector[l];
-                Softmax(c, intClassOutput*t+intOffset+intSumSize, intClassOutput*t+intOffset+intSumSize+intClassSize-1);
-                dClassProb = dClassProb*c[intClassOutput*t+intSumSize+intClass].re;
-                intSumSize = (intSumSize + 1) * intClassSize;
-                intOffset = intClass * intClassSize;
+                Softmax(c, intClassOutput*t+intClassSize*i, intClassOutput*t+intClassSize*(i+1)-1);
+                intClassIndex = wIndexs[t+1].intVector[i];
+                dClassProb = dClassProb*c[intClassOutput*t+intClassSize*i+intClassIndex].re;
             }
         }
         else
         {
-            for(int i=0; i<intClassSize; i++)
-            {
-                c[intClassSize*t+i].re = 0;
-                for(int j=0; j<intHiddenSize; j++)
-                {
-                    c[intClassSize*t+i].re += Vc[intHiddenSize*i+j] * s[intHiddenSize*(t+1)+j].re;
-                }
-                if(bEnDirect)
-                {
-                    for(int j=0; j<intInputSize; j++)
-                    {
-                        c[intClassSize*t+i].re += Mc[intInputSize*i+j] * x[intInputSize*(t+1)+j].re;
-                    }
-                }
-                if(bEnBias) {c[intClassSize*t+i].re += dc[i];}
-            }
-            Softmax(c, intClassSize*t, intClassSize*(t+1)-1);
-            dClassProb = c[intClassSize*t+intClass].re;
+            Softmax(c, intClassOutput*t, intClassOutput*(t+1)-1);
+            dClassProb = c[intClassOutput*t+intClass].re;
         }
         if(intIndex == unKnownIndex.intIndex)
         {
@@ -394,8 +370,6 @@ void NNLM::Update()
 {
     double dLdp;
     double error;
-    int classIndex;
-    int intSumSize;
     int intClass;
     int intOffset;
     int intIndex = 0;
@@ -423,31 +397,25 @@ void NNLM::Update()
             y[intVocabSize*t+i].er = 0 - y[intVocabSize*t+i].re;
         }
         y[intVocabSize*t+intIndex].er = 1 - y[intVocabSize*t+intIndex].re;
+        
+        // error of outputs for word classes
+        for(int i=0; i<intClassOutput; i++)
+        {
+            c[intClassOutput*t+i].er = 0 - c[intClassOutput*t+i].re;
+        }
         if(bEnHierarchies)
         {
-            intSumSize = 0;
-            intOffset = 0;
-            for(int l=0; l<intClassLayer; l++)
+            int intClassIndex;
+
+            for(int i=0; i<intClassLayer; i++)
             {
-                for(int i=0; i<intClassSize; i++)
-                {
-                    classIndex = intOffset + intSumSize + i;
-                    c[intClassOutput*t+classIndex].er = 0 - c[intClassOutput*t+classIndex].re;
-                }
-                intClass = wIndexs[t+1].intVector[l];
-                c[intClassOutput*t+intSumSize+intClass].er = 1 - c[intClassOutput*t+intSumSize+intClass].re;
-                intSumSize = (intSumSize + 1) * intClassSize;
-                intOffset = intClass * intClassSize;
+                intClassIndex = wIndexs[t+1].intVector[i];
+                c[intClassOutput*t+intClassSize*i+intClassIndex].er = 1 - c[intClassOutput*t+intClassSize*i+intClassIndex].re;
             }
         }
         else
         {
-            // error of outputs for word classes
-            for(int i=0; i<intClassSize; i++)
-            {
-                c[intClassSize*t+i].er = 0 - c[intClassSize*t+i].re;
-            }
-            c[intClassSize*t+intClass].er = 1 - c[intClassSize*t+intClass].re;
+            c[intClassOutput*t+intClass].er = 1 - c[intClassOutput*t+intClass].re;
 
         }
         
@@ -476,70 +444,30 @@ void NNLM::Update()
             }
         }
 
-        // error gradient for matrix Vc Mc and hidden states
-        if(bEnHierarchies)
+        for(int i=0; i<intClassOutput; i++)
         {
-            intSumSize = 0;
-            intOffset = 0;
-            for(int l=0; l<intClassLayer; l++)
+            dLdp = c[intClassOutput*t+i].er;
+            for(int j=0; j<intHiddenSize; j++)
             {
-                for(int i=0; i<intClassSize; i++)
-                {
-                    classIndex = intOffset + intSumSize + i;
-                    dLdp = c[intClassOutput*t+classIndex].er;
-                    for(int j=0; j<intHiddenSize; j++)
-                    {
-                        s[intHiddenSize*(t+1)+j].er += dLdp * Vcb[intHiddenSize*classIndex+j];
-                        error = dLdp * s[intHiddenSize*(t+1)+j].re;
-                        Vc[intHiddenSize*classIndex+j] += dAlpha*error - dRBeta*Vcb[intHiddenSize*classIndex+j];
-                    }
-                    if(bEnDirect)
-                    {
-                        for(int j=0; j<intInputSize; j++)
-                        {
-                            x[intInputSize*(t+1)+j].er += dLdp * Mcb[intInputSize*classIndex+j];
-                            error = dLdp * x[intInputSize*(t+1)+j].re;
-                            Mc[intInputSize*classIndex+j] += dAlpha*error - dRBeta*Mcb[intInputSize*classIndex+j];
-                        }
-                    }
-                    if(bEnBias)
-                    {
-                        dc[classIndex] += dAlpha*dLdp - dRBeta*dc[classIndex];
-                    }
-                }
-                intClass = wIndexs[t+1].intVector[l];
-                intSumSize = (intSumSize + 1) * intClassSize;
-                intOffset = intClass * intClassSize;
+                s[intHiddenSize*(t+1)+j].er += dLdp * Vcb[intHiddenSize*i+j];
+                error = dLdp * s[intHiddenSize*(t+1)+j].re;
+                Vc[intHiddenSize*i+j] += dAlpha*error - dRBeta*Vcb[intHiddenSize*i+j];
+                
             }
-        }
-        else
-        {
-            for(int i=0; i<intClassSize; i++)
+            if(bEnDirect)
             {
-                dLdp = c[intClassSize*t+i].er;
-                for(int j=0; j<intHiddenSize; j++)
+                for(int j=0; j<intInputSize; j++)
                 {
-                    s[intHiddenSize*(t+1)+j].er += dLdp * Vcb[intHiddenSize*i+j];
-                    error = dLdp * s[intHiddenSize*(t+1)+j].re;
-                    Vc[intHiddenSize*i+j] += dAlpha*error - dRBeta*Vcb[intHiddenSize*i+j];
-                    
-                }
-                if(bEnDirect)
-                {
-                    for(int j=0; j<intInputSize; j++)
-                    {
-                        x[intInputSize*(t+1)+j].er += dLdp * Mcb[intInputSize*i+j];
-                        error = dLdp * x[intInputSize*(t+1)+j].re;
-                        Mc[intInputSize*i+j] += dAlpha*error - dRBeta*Mcb[intInputSize*i+j];
-                    }
-                }
-                if(bEnBias)
-                {
-                    dc[i] += dAlpha*dLdp - dRBeta*dc[i];
+                    x[intInputSize*(t+1)+j].er += dLdp * Mcb[intInputSize*i+j];
+                    error = dLdp * x[intInputSize*(t+1)+j].re;
+                    Mc[intInputSize*i+j] += dAlpha*error - dRBeta*Mcb[intInputSize*i+j];
                 }
             }
-        }
-            
+            if(bEnBias)
+            {
+                dc[i] += dAlpha*dLdp - dRBeta*dc[i];
+            }
+        }            
     }
 
     objHidden.Update(dAlpha, dRBeta);
@@ -673,6 +601,7 @@ void NNLM::TrainModel()
         dp = opendir(strTrainFiles.c_str());
         while((dirp=readdir(dp))!=NULL)
         {
+            intLength = 0;
             string strFileName(dirp->d_name);
             strFilePath = strTrainFiles + strFileName;
             stat(strFilePath.c_str(), &statBuf);
@@ -766,6 +695,7 @@ void NNLM::ValidModel(FILE *finLog)
     dp = opendir(strValidFiles.c_str());
     while((dirp=readdir(dp))!=NULL)
     {
+        intLength = 0;
         string strFileName(dirp->d_name);
         strFilePath = strValidFiles + strFileName;
         stat(strFilePath.c_str(), &statBuf);
@@ -840,6 +770,7 @@ void NNLM::TestModel()
     dp = opendir(strTestFiles.c_str());
     while((dirp=readdir(dp))!=NULL)
     {
+        intLength = 0;
         string strFileName(dirp->d_name);
         strFilePath = strTestFiles + strFileName;
         stat(strFilePath.c_str(), &statBuf);

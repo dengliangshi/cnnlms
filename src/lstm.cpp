@@ -94,7 +94,6 @@ weight* LSTMNN::Run(weight *input, int length)
             {
                 ig[intIndex] += iGate.U[intInputSize*i+j].re * x[intInputSize*(t+1)+j].re;
                 fg[intIndex] += fGate.U[intInputSize*i+j].re * x[intInputSize*(t+1)+j].re;
-                og[intIndex] += oGate.U[intInputSize*i+j].re * x[intInputSize*(t+1)+j].re;
                 g[intIndex] += objNodes.U[intInputSize*i+j].re * x[intInputSize*(t+1)+j].re;
             }
             for(int j=0; j<intHiddenSize; j++)
@@ -109,7 +108,6 @@ weight* LSTMNN::Run(weight *input, int length)
             {
                 ig[intIndex] += iGate.b[i].re;
                 fg[intIndex] += fGate.b[i].re;
-                og[intIndex] += oGate.b[i].re;
                 g[intIndex] += objNodes.b[i].re;
             }
             if(ig[intIndex] > 50) { ig[intIndex] = 50; }
@@ -135,10 +133,20 @@ weight* LSTMNN::Run(weight *input, int length)
             intIndex = intHiddenSize*t + i;
             intNext = intHiddenSize*(t+1) + i;
             s[intNext].er = 0;
+            og[intIndex] = 0;
+
+            for(int j=0; j<intInputSize; j++)
+            {
+                og[intIndex] += oGate.U[intInputSize*i+j].re * x[intInputSize*(t+1)+j].re;
+            }
             for(int j=0; j<intHiddenSize; j++)
             {
                 og[intIndex] += (oGate.W[intHiddenSize*i+j].re * s[intHiddenSize*t+j].re
                     + oGate.V[intHiddenSize*i+j].re * c[intHiddenSize*(t+1)+j].re);
+            }
+            if(bEnBias)
+            {
+                og[intIndex] += oGate.b[i].re;
             }
             if(og[intIndex] > 50) { og[intIndex] = 50; }
             if(og[intIndex] < -50) { og[intIndex] = -50; }
@@ -167,6 +175,11 @@ void LSTMNN::Update(double dAlpha, double dBeta)
             intNext = intHiddenSize*(t+1)+i;
 
             dLdo = s[intNext].er * h[intIndex] * dAcFun(og[intIndex], intGateFun);
+            for(int j=0; j<intInputSize; j++)
+            {
+                x[intInputSize*(t+1)+j].er += dLdo * oGate.U[intInputSize*i+j].re;
+                oGate.U[intInputSize*i+j].er += dLdo * x[intInputSize*(t+1)+j].re;
+            }
             for(int j=0; j<intHiddenSize; j++)
             {
                 oGate.W[intHiddenSize*i+j].er += dLdo * s[intHiddenSize*t+j].re;
@@ -174,13 +187,16 @@ void LSTMNN::Update(double dAlpha, double dBeta)
                 oGate.V[intHiddenSize*i+j].er += dLdo * c[intHiddenSize*(t+1)+j].re;
                 c[intHiddenSize*(t+1)+j].er += dLdo * oGate.V[intHiddenSize*i+j].re;
             }
+            if(bEnBias)
+            {
+                oGate.b[i].er += dLdo;
+            }
         }
         for(int i=0; i<intHiddenSize; i++)
         {
             intIndex = intHiddenSize*t+i;
             intNext = intHiddenSize*(t+1)+i;
-            
-            dLdo = s[intNext].er * h[intIndex] * dAcFun(og[intIndex], intGateFun);
+
             c[intNext].er += s[intNext].er * og[intIndex] * dAcFun(h[intIndex], intAcFun);
             dLdi = c[intNext].er * g[intIndex] * dAcFun(ig[intIndex], intGateFun);
             dLdf = c[intNext].er * c[intIndex].re * dAcFun(fg[intIndex], intGateFun);
@@ -192,8 +208,6 @@ void LSTMNN::Update(double dAlpha, double dBeta)
                 iGate.U[intInputSize*i+j].er += dLdi * x[intInputSize*(t+1)+j].re;
                 x[intInputSize*(t+1)+j].er += dLdf * fGate.U[intInputSize*i+j].re;
                 fGate.U[intInputSize*i+j].er += dLdf * x[intInputSize*(t+1)+j].re;
-                x[intInputSize*(t+1)+j].er += dLdo * oGate.U[intInputSize*i+j].re;
-                oGate.U[intInputSize*i+j].er += dLdo * x[intInputSize*(t+1)+j].re;
                 x[intInputSize*(t+1)+j].er += dLdg * objNodes.U[intInputSize*i+j].re;
                 objNodes.U[intInputSize*i+j].er += dLdg * x[intInputSize*(t+1)+j].re;
             }
@@ -216,7 +230,6 @@ void LSTMNN::Update(double dAlpha, double dBeta)
             {
                 iGate.b[i].er += dLdi;
                 fGate.b[i].er += dLdf;
-                oGate.b[i].er += dLdo;
                 objNodes.b[i].er += dLdg;
             }
         }
