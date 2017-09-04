@@ -239,3 +239,19 @@ void LSTMNN::Update(double dAlpha, double dBeta)
     oGate.Update(dAlpha, dBeta);
     objNodes.Update(dAlpha, dBeta);
 }
+
+void LSTMNN::SaveModel(FILE *fout)
+{
+    iGate.SaveModel(fout);
+    fGate.SaveModel(fout);
+    oGate.SaveModel(fout);
+    objNodes.SaveModel(fout);
+}
+
+void LSTMNN::LoadModel(FILE *fin)
+{
+    iGate.LoadModel(fin);
+    fGate.LoadModel(fin);
+    oGate.LoadModel(fin);
+    objNodes.LoadModel(fin);
+}

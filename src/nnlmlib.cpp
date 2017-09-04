@@ -611,7 +611,7 @@ void NNLM::TrainModel()
             fin = fopen(strFilePath.c_str(), "rb");
             while(!feof(fin))
             {
-                if(bEnCache)
+                if(bEnCache && s != NULL)
                 {
                     // using caching
                     for(int j=0; j<intHiddenSize; j++)
@@ -705,7 +705,7 @@ void NNLM::ValidModel(FILE *finLog)
         fin = fopen(strFilePath.c_str(), "rb");
         while(!feof(fin))
         {
-            if(bEnCache)
+            if(bEnCache && s != NULL)
             {
                 for(int i=0; i<intHiddenSize; i++)
                 {
@@ -780,7 +780,7 @@ void NNLM::TestModel()
         fin = fopen(strFilePath.c_str(), "rb");
         while(!feof(fin))
         {
-            if(bEnCache)
+            if(bEnCache && s != NULL)
             {
                 for(int i=0; i<intHiddenSize; i++)
                 {
@@ -1150,4 +1150,8 @@ void NNLM::LoadModel()
         fclose(finLog);
     }
     fclose(fin);
+    //finLog = fopen(strLogFile.c_str(), "a");
+    //SaveModel(finLog);
+    //fclose(finLog);
+    //exit(0);
 }

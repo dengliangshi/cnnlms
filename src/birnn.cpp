@@ -142,7 +142,7 @@ void BiRecurrentNN::Update(double dAlpha, double dBeta)
     {
         for(int i=0; i<intHalfSize; i++)
         {
-            fs[intHalfSize*(t+1)].er = s[intHiddenSize*(t+1)+i].er;
+            fs[intHalfSize*(t+1)+i].er = s[intHiddenSize*(t+1)+i].er;
             bs[intHalfSize*(intLength-t)+i].er = s[intHiddenSize*(t+1)+intHalfSize+i].er;
         }
     }

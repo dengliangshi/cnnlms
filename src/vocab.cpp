@@ -184,6 +184,21 @@ void Vocab::SortVocab()
         wordList[intCount] = t->second;
         intCount ++;
     }
+    // sort words in descent order according to their frequency
+    for(int i = 0; i < intWordCount; i++)
+    {
+        intMaxIndex = i;
+        for(int j = i + 1; j < intWordCount; j++)
+        {
+            if(wordList[j].intFreq > wordList[intMaxIndex].intFreq)
+            {
+                intMaxIndex = j;
+            }
+        }
+        wordTemp = wordList[i];
+        wordList[i] = wordList[intMaxIndex];
+        wordList[intMaxIndex] = wordTemp;
+    }
     // add unkown word into vocabulary
     if(intWordCount < intVocabSize - 1)
     {
@@ -201,25 +216,7 @@ void Vocab::SortVocab()
         }
         wordList[intVocabSize-1].strName = strUnknown;
         wordList[intVocabSize-1].intFreq = intSumFreq;
-    }
-    if(intClassAssign > 0)
-    {
-        // sort words in descent order according to their frequency
-        for(int i = 0; i < intVocabSize; i++)
-        {
-            intMaxIndex = i;
-            for(int j = i + 1; j < intVocabSize; j++)
-            {
-                if(wordList[j].intFreq > wordList[intMaxIndex].intFreq)
-                {
-                    intMaxIndex = j;
-                }
-            }
-            wordTemp = wordList[i];
-            wordList[i] = wordList[intMaxIndex];
-            wordList[intMaxIndex] = wordTemp;
-        }
-    }
+    } 
     // assign each word in vocabulary with a class
     AssignIndex(wordList);
     /*FILE *fin;
@@ -259,6 +256,15 @@ void Vocab::AssignIndex(word *wordList)
     {
         case 0:
         {
+            word wordTemp;        // temporary variable for swaping words
+
+            for(int i=0; i<intVocabSize; i++)
+            {
+                int j = intVocabSize*rand()/RAND_MAX;
+                wordTemp = wordList[i];
+                wordList[i] = wordList[j];
+                wordList[j] = wordTemp;
+            }
             if(intClassLayer > 1)
             {
                 int *intClassVector;
@@ -310,10 +316,14 @@ void Vocab::AssignIndex(word *wordList)
                 for(int i=0; i<intVocabSize; i++)
                 {
                     wordList[i].intIndex = i;
-                    if((i % subClassSize) == 0 && intClassIndex < intClassSize-1)
+                    if((i % subClassSize) == 0 && i > 0)
                     {
-                        intSubClassSize[intClassIndex] = i-1;
-                        intClassIndex ++;
+                        if(intClassIndex < intClassSize-1)
+                        {
+                            intSubClassSize[intClassIndex] = i-1;
+                            intClassIndex ++;
+                        }
+                        
                     }
                     wordList[i].intClass = intClassIndex;
                 }

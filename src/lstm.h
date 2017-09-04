@@ -56,6 +56,10 @@ public:
     weight* Run(weight *input, int length);
     // update each parameters according to its error gradient
     void Update(double dAlpha, double dBeta);
+    // save model
+    void SaveModel(FILE *fout);
+    // load model
+    void LoadModel(FILE *fin);
 };
 
 #endif
